@@ -12,6 +12,7 @@ struct Checklist_Manifesto_v2App: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .tint(Theme.accent)
         }
     }
 }
