@@ -9,6 +9,8 @@ struct ChecklistView: View {
     @State private var showingOrganizeMode = false
     @State private var itemToMove: ChecklistItem?
     @State private var showingNotesEditor = false
+    @State private var itemToEdit: ChecklistItem?
+    @State private var editedItemTitle = ""
     @Environment(\.dismiss) private var dismiss
     
     init(checklist: Checklist, appData: AppData) {
@@ -52,6 +54,24 @@ struct ChecklistView: View {
                                         itemToMove = item
                                     } : nil
                                 )
+                                .contextMenu {
+                                    Button {
+                                        editedItemTitle = flatItem.item.title
+                                        itemToEdit = flatItem.item
+                                    } label: {
+                                        Label("Edit", systemImage: "pencil")
+                                    }
+                                    
+                                    Divider()
+                                    
+                                    Button(role: .destructive) {
+                                        withAnimation {
+                                            viewModel.deleteItem(flatItem.item)
+                                        }
+                                    } label: {
+                                        Label("Delete", systemImage: "trash")
+                                    }
+                                }
                                 .transition(.asymmetric(
                                     insertion: .opacity.combined(with: .move(edge: .top)),
                                     removal: .opacity.combined(with: .scale)
@@ -240,6 +260,17 @@ struct ChecklistView: View {
         }
         .sheet(item: $itemToMove) { item in
             MoveItemSheet(item: item, viewModel: viewModel)
+        }
+        .sheet(item: $itemToEdit) { item in
+            EditItemSheet(
+                title: $editedItemTitle,
+                itemTitle: item.title,
+                onSave: {
+                    if !editedItemTitle.isEmpty && editedItemTitle != item.title {
+                        viewModel.updateItemTitle(item, newTitle: editedItemTitle)
+                    }
+                }
+            )
         }
     }
     

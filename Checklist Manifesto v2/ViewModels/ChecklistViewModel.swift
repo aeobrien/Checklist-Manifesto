@@ -38,6 +38,10 @@ class ChecklistViewModel: ObservableObject {
             // If manual toggle on parent item, propagate to children
             if isManual && updatedItem.hasChildren {
                 self.propagateManualToggle(to: &updatedItem.children, checked: updatedItem.isFirstTicked)
+                // Auto-collapse when manually checking a parent
+                if updatedItem.isFirstTicked {
+                    updatedItem.isExpanded = false
+                }
             }
         }
         
@@ -100,7 +104,13 @@ class ChecklistViewModel: ObservableObject {
                     propagateRecursively(&items[i].children)
                     // Only auto-update the first checkbox based on children
                     let allChildrenFirstTicked = items[i].allChildrenFirstTicked
+                    let wasUnchecked = !items[i].isFirstTicked
                     items[i].isFirstTicked = allChildrenFirstTicked
+                    
+                    // Auto-collapse when item becomes checked
+                    if wasUnchecked && items[i].isFirstTicked {
+                        items[i].isExpanded = false
+                    }
                     // Second checkbox must be manually ticked
                 }
             }
@@ -164,6 +174,13 @@ class ChecklistViewModel: ObservableObject {
         }
         _ = deleteRecursively(&checklist.items)
         propagateTickStates()
+        saveChanges()
+    }
+    
+    func updateItemTitle(_ item: ChecklistItem, newTitle: String) {
+        updateItem(item) { updatedItem in
+            updatedItem.title = newTitle
+        }
         saveChanges()
     }
     

@@ -50,6 +50,18 @@ struct Checklist: Identifiable, Codable {
         }
     }
     
+    var totalItemCount: Int {
+        func countItems(_ items: [ChecklistItem]) -> Int {
+            var count = 0
+            for item in items {
+                count += 1
+                count += countItems(item.children)
+            }
+            return count
+        }
+        return countItems(items)
+    }
+    
     var completionPercentage: Double {
         let (completed, total) = countCompletedItems()
         guard total > 0 else { return 0 }

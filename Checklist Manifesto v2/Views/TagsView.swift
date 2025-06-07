@@ -114,7 +114,7 @@ struct ChecklistCard: View {
                             .foregroundColor(Theme.textPrimary)
                         
                         HStack(spacing: 12) {
-                            Label("\(checklist.items.count) items", systemImage: "checklist")
+                            Label("\(checklist.totalItemCount) items", systemImage: "checklist")
                                 .font(Typography.caption)
                                 .foregroundColor(Theme.textSecondary)
                             

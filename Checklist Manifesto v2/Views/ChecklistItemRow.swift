@@ -8,6 +8,8 @@ struct ChecklistItemRow: View {
     @State private var isHovered = false
     @State private var showingAddSubItem = false
     @State private var newSubItemTitle = ""
+    @State private var showingEditItem = false
+    @State private var editedTitle = ""
     
     var body: some View {
         HStack(spacing: 0) {
@@ -106,6 +108,63 @@ struct ChecklistItemRow: View {
                 if !newSubItemTitle.isEmpty {
                     viewModel.addItem(title: newSubItemTitle, parent: item)
                     newSubItemTitle = ""
+                }
+            }
+        }
+        .sheet(isPresented: $showingEditItem) {
+            EditItemSheet(
+                title: $editedTitle,
+                itemTitle: item.title,
+                onSave: {
+                    if !editedTitle.isEmpty && editedTitle != item.title {
+                        viewModel.updateItemTitle(item, newTitle: editedTitle)
+                    }
+                }
+            )
+        }
+    }
+}
+
+struct EditItemSheet: View {
+    @Binding var title: String
+    let itemTitle: String
+    let onSave: () -> Void
+    @Environment(\.dismiss) private var dismiss
+    
+    init(title: Binding<String>, itemTitle: String, onSave: @escaping () -> Void) {
+        self._title = title
+        self.itemTitle = itemTitle
+        self.onSave = onSave
+        if title.wrappedValue.isEmpty {
+            title.wrappedValue = itemTitle
+        }
+    }
+    
+    var body: some View {
+        NavigationView {
+            VStack(spacing: Theme.spacing) {
+                TextField("Item title", text: $title)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                    .font(Typography.body)
+                
+                Spacer()
+            }
+            .padding()
+            .navigationTitle("Edit Item")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+                
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Save") {
+                        onSave()
+                        dismiss()
+                    }
+                    .disabled(title.isEmpty)
                 }
             }
         }
