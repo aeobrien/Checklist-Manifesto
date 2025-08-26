@@ -73,6 +73,7 @@ struct ChecklistItem: Identifiable, Codable, Equatable {
     
     mutating func reset() {
         isFirstTicked = false
+        isExpanded = true  // Reset expanded state to true
         if hasChildren {
             isSecondTicked = false
             for i in children.indices {

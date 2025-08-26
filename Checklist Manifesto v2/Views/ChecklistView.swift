@@ -13,8 +13,19 @@ struct ChecklistView: View {
     @State private var editedItemTitle = ""
     @Environment(\.dismiss) private var dismiss
     
-    init(checklist: Checklist, appData: AppData) {
-        _viewModel = StateObject(wrappedValue: ChecklistViewModel(checklist: checklist, appData: appData))
+    init(checklistID: UUID, mainViewModel: MainViewModel) {
+        print("\n🔵 ChecklistView INIT - ID: \(checklistID)")
+        print("  📊 MainViewModel has \(mainViewModel.appData.checklists.count) checklists")
+        
+        // Find the checklist by ID from mainViewModel
+        if let checklist = mainViewModel.appData.checklists.first(where: { $0.id == checklistID }) {
+            print("  ✅ Found checklist: \(checklist.title) with \(checklist.items.count) items")
+            _viewModel = StateObject(wrappedValue: ChecklistViewModel(checklist: checklist, mainViewModel: mainViewModel))
+        } else {
+            print("  ❌ Checklist not found! Creating fallback")
+            // Fallback in case checklist isn't found (shouldn't happen)
+            _viewModel = StateObject(wrappedValue: ChecklistViewModel(checklist: Checklist(title: "Unknown"), mainViewModel: mainViewModel))
+        }
     }
     
     var body: some View {
@@ -115,11 +126,24 @@ struct ChecklistView: View {
         )
         .confirmationDialog("Reset Checklist?", isPresented: $showingResetConfirmation) {
             Button("Reset", role: .destructive) {
+                print("\n🔄 User requested reset for: \(viewModel.checklist.title)")
                 viewModel.resetChecklist()
             }
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("This will uncheck all items in the checklist.")
+        }
+        .onAppear {
+            print("\n👀 ChecklistView appeared - \(viewModel.checklist.title)")
+            print("  📊 Current items: \(viewModel.checklist.items.count)")
+            // Don't refresh on appear - it overwrites local changes
+            // viewModel.refreshChecklistFromAppData()
+        }
+        .onDisappear {
+            print("\n👋 ChecklistView disappearing - \(viewModel.checklist.title)")
+            print("  📊 Final items: \(viewModel.checklist.items.count)")
+            // Don't save on disappear - we save after each change
+            // viewModel.saveChanges()
         }
     }
     
@@ -198,7 +222,7 @@ struct ChecklistView: View {
                                 RoundedRectangle(cornerRadius: Theme.smallCornerRadius)
                                     .stroke(Theme.divider, lineWidth: 1)
                             )
-                            .onChange(of: viewModel.checklist.notes) { _ in
+                            .onChange(of: viewModel.checklist.notes) {
                                 viewModel.saveChanges()
                             }
                     } else {
@@ -251,7 +275,8 @@ struct ChecklistView: View {
             )
         }
         .sheet(isPresented: $showingAddItem) {
-            AddItemSheet(title: $newItemTitle, appData: viewModel.appData) {
+            AddItemSheet(title: $newItemTitle, appData: viewModel.mainViewModel.appData) {
+                print("\n🆕 AddItemSheet callback - Adding: \(newItemTitle)")
                 if !newItemTitle.isEmpty {
                     viewModel.addItem(title: newItemTitle)
                     newItemTitle = ""
@@ -363,8 +388,8 @@ struct AddItemSheet: View {
                     TextField("Search or create new item", text: $searchText)
                         .textFieldStyle(RoundedBorderTextFieldStyle())
                         .font(Typography.body)
-                        .onChange(of: searchText) { newValue in
-                            title = newValue
+                        .onChange(of: searchText) {
+                            title = searchText
                             showingSuggestions = true
                         }
                     

@@ -104,7 +104,7 @@ struct ChecklistItemRow: View {
             }
         }
         .sheet(isPresented: $showingAddSubItem) {
-            AddItemSheet(title: $newSubItemTitle, appData: viewModel.appData) {
+            AddItemSheet(title: $newSubItemTitle, appData: viewModel.mainViewModel.appData) {
                 if !newSubItemTitle.isEmpty {
                     viewModel.addItem(title: newSubItemTitle, parent: item)
                     newSubItemTitle = ""

@@ -59,6 +59,15 @@ struct TagsView: View {
                 }
             }
         }
+        .onAppear {
+            print("\n🏠 TagsView appeared")
+            // Reload data from disk to get latest changes
+            viewModel.reloadData()
+            print("  📊 Total checklists: \(viewModel.appData.checklists.count)")
+            for checklist in viewModel.appData.checklists {
+                print("    - \(checklist.title): \(checklist.items.count) items, \(checklist.completionPercentage)% complete")
+            }
+        }
         .sheet(isPresented: $showingCreateChecklist) {
             ChecklistEditorView(viewModel: viewModel)
         }
@@ -85,7 +94,7 @@ struct TagSection: View {
                 .padding(.bottom, 4)
             
             ForEach(checklists) { checklist in
-                NavigationLink(destination: ChecklistView(checklist: checklist, appData: viewModel.appData)) {
+                NavigationLink(destination: ChecklistView(checklistID: checklist.id, mainViewModel: viewModel)) {
                     ChecklistCard(
                         checklist: checklist,
                         viewModel: viewModel,

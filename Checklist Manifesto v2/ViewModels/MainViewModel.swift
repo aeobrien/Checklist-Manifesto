@@ -9,15 +9,25 @@ class MainViewModel: ObservableObject {
     @Published var showingImport = false
     
     init() {
+        print("\n🚀 MainViewModel INIT")
         self.appData = AppData.load()
+        print("  📊 Loaded \(appData.checklists.count) checklists")
         
         if appData.checklists.isEmpty {
+            print("  📝 Creating sample data...")
             createSampleData()
         }
     }
     
     func saveData() {
         appData.save()
+    }
+    
+    func reloadData() {
+        print("\n🔄 MainViewModel reloading data from disk")
+        let oldCount = appData.checklists.count
+        appData = AppData.load()
+        print("  📊 Reloaded: \(oldCount) -> \(appData.checklists.count) checklists")
     }
     
     func getAllUsedItemTitles() -> [String] {

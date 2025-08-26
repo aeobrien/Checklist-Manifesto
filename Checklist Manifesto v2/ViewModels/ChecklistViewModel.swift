@@ -5,16 +5,24 @@ import Combine
 @MainActor
 class ChecklistViewModel: ObservableObject {
     @Published var checklist: Checklist
-    @Published var appData: AppData
+    let mainViewModel: MainViewModel
+    let checklistID: UUID
     
     private var cancellables = Set<AnyCancellable>()
-    private let resetTimer = Timer.publish(every: 3600, on: .main, in: .common).autoconnect()
+    private let resetTimer = Timer.publish(every: 60, on: .main, in: .common).autoconnect()  // Check every minute
     
-    init(checklist: Checklist, appData: AppData) {
+    init(checklist: Checklist, mainViewModel: MainViewModel) {
         self.checklist = checklist
-        self.appData = appData
+        self.checklistID = checklist.id
+        self.mainViewModel = mainViewModel
+        
+        print("\n🔵 ChecklistViewModel INIT - Checklist: \(checklist.title), ID: \(checklist.id)")
+        print("  📊 Initial item count: \(checklist.items.count)")
+        print("  📊 MainViewModel has \(mainViewModel.appData.checklists.count) checklists")
         
         setupAutoReset()
+        // Don't refresh on init - we already have the correct checklist passed in
+        // refreshChecklistFromAppData()
     }
     
     private func setupAutoReset() {
@@ -26,17 +34,48 @@ class ChecklistViewModel: ObservableObject {
     }
     
     private func checkForAutoReset() {
+        // Refresh checklist from mainViewModel to get latest state
+        refreshChecklistFromAppData()
+        
         if checklist.shouldAutoReset {
             resetChecklist()
         }
     }
     
+    func refreshChecklistFromAppData() {
+        print("🔄 REFRESH from AppData - Looking for ID: \(checklistID)")
+        if let index = mainViewModel.appData.checklists.firstIndex(where: { $0.id == checklistID }) {
+            let oldCount = checklist.items.count
+            checklist = mainViewModel.appData.checklists[index]
+            print("  ✅ Found checklist at index \(index)")
+            print("  📊 Item count: \(oldCount) -> \(checklist.items.count)")
+            
+            // Print all items for debugging
+            func printItems(_ items: [ChecklistItem], indent: String = "") {
+                for item in items {
+                    print("    \(indent)- \(item.title) [1st: \(item.isFirstTicked), 2nd: \(item.isSecondTicked?.description ?? "nil")]")
+                    if !item.children.isEmpty {
+                        printItems(item.children, indent: indent + "  ")
+                    }
+                }
+            }
+            printItems(checklist.items)
+        } else {
+            print("  ❌ Checklist NOT FOUND in AppData!")
+        }
+    }
+    
     func toggleFirstTick(for item: ChecklistItem, isManual: Bool) {
+        print("\n🔲 TOGGLE FIRST TICK - Item: \(item.title), Manual: \(isManual)")
+        print("  Current state: \(item.isFirstTicked)")
+        
         updateItem(item) { updatedItem in
             updatedItem.isFirstTicked.toggle()
+            print("  New state: \(updatedItem.isFirstTicked)")
             
             // If manual toggle on parent item, propagate to children
             if isManual && updatedItem.hasChildren {
+                print("  📢 Propagating to \(updatedItem.children.count) children")
                 self.propagateManualToggle(to: &updatedItem.children, checked: updatedItem.isFirstTicked)
                 // Auto-collapse when manually checking a parent
                 if updatedItem.isFirstTicked {
@@ -65,6 +104,7 @@ class ChecklistViewModel: ObservableObject {
     
     func toggleSecondTick(for item: ChecklistItem) {
         guard item.hasChildren else { return }
+        
         updateItem(item) { updatedItem in
             if let secondTicked = updatedItem.isSecondTicked {
                 updatedItem.isSecondTicked = !secondTicked
@@ -125,21 +165,52 @@ class ChecklistViewModel: ObservableObject {
     }
     
     func resetChecklist() {
+        print("\n🔄 RESET CHECKLIST - \(checklist.title)")
+        print("  📊 Items before reset: \(checklist.items.count)")
+        print("  ✅ Completion before: \(checklist.completionPercentage)%")
+        
         checklist.reset()
+        
+        print("  📊 Items after reset: \(checklist.items.count)")
+        print("  ✅ Completion after: \(checklist.completionPercentage)%")
+        
         saveChanges()
     }
     
     func saveChanges() {
+        print("\n💾 SAVE CHANGES - Checklist: \(checklist.title)")
         checklist.modifiedDate = Date()
-        if let index = appData.checklists.firstIndex(where: { $0.id == checklist.id }) {
-            appData.checklists[index] = checklist
-            appData.save()
+        
+        if let index = mainViewModel.appData.checklists.firstIndex(where: { $0.id == checklistID }) {
+            print("  📍 Found at index \(index) in mainViewModel.appData")
+            print("  📊 Saving \(checklist.items.count) items")
+            
+            // Show what we're saving
+            for (i, item) in checklist.items.enumerated() {
+                print("    [\(i)] \(item.title) - ticked: \(item.isFirstTicked)")
+            }
+            
+            mainViewModel.appData.checklists[index] = checklist
+            mainViewModel.saveData()
+            
+            // Verify save
+            print("  ✅ Saved to mainViewModel.appData")
+            print("  📊 MainViewModel now has \(mainViewModel.appData.checklists[index].items.count) items for this checklist")
+        } else {
+            print("  ❌ ERROR: Checklist not found in mainViewModel.appData!")
         }
+        
+        // Force UI update
+        objectWillChange.send()
     }
     
     func addItem(title: String, parent: ChecklistItem? = nil) {
+        print("\n➕ ADD ITEM - Title: \(title), Parent: \(parent?.title ?? "root")")
+        print("  📊 Items before: \(checklist.items.count)")
+        
         let nestingLevel = (parent?.nestingLevel ?? -1) + 1
         let newItem = ChecklistItem(title: title, parentID: parent?.id, nestingLevel: nestingLevel)
+        print("  🆕 Creating item with ID: \(newItem.id)")
         
         if let parent = parent {
             updateItem(parent) { updatedParent in
@@ -150,13 +221,16 @@ class ChecklistViewModel: ObservableObject {
             }
         } else {
             checklist.items.append(newItem)
+            print("  🌳 Added to root level")
         }
         
+        print("  📊 Items after: \(checklist.items.count)")
         propagateTickStates()
         saveChanges()
     }
     
     func deleteItem(_ item: ChecklistItem) {
+        
         func deleteRecursively(_ items: inout [ChecklistItem]) -> Bool {
             if let index = items.firstIndex(where: { $0.id == item.id }) {
                 items.remove(at: index)
@@ -178,6 +252,7 @@ class ChecklistViewModel: ObservableObject {
     }
     
     func updateItemTitle(_ item: ChecklistItem, newTitle: String) {
+        
         updateItem(item) { updatedItem in
             updatedItem.title = newTitle
         }
@@ -185,6 +260,7 @@ class ChecklistViewModel: ObservableObject {
     }
     
     func moveItem(_ item: ChecklistItem, to newParent: ChecklistItem?) {
+        
         var itemCopy: ChecklistItem?
         
         func removeItem(_ items: inout [ChecklistItem]) -> Bool {
@@ -246,5 +322,11 @@ class ChecklistViewModel: ObservableObject {
         
         flatten(checklist.items)
         return result
+    }
+    
+    deinit {
+        // Can't access main actor properties in deinit
+        print("\n🔴 ChecklistViewModel DEINIT")
+        cancellables.removeAll()
     }
 }

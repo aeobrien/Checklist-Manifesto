@@ -97,10 +97,16 @@ struct Checklist: Identifiable, Codable {
     }
     
     mutating func reset() {
+        print("\n🔄 Checklist.reset() - \(title)")
+        print("  📊 Before reset: \(items.count) items, completion: \(completionPercentage)%")
+        
         for i in items.indices {
             items[i].reset()
         }
+        lastCompletedDate = nil  // Clear the completion date when resetting
         modifiedDate = Date()
+        
+        print("  📊 After reset: completion: \(completionPercentage)%")
     }
     
     mutating func markCompleted() {
