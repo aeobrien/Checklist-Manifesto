@@ -5,12 +5,18 @@ struct ChecklistView: View {
     @StateObject private var viewModel: ChecklistViewModel
     @State private var showingAddItem = false
     @State private var newItemTitle = ""
+    @State private var newItemCategory = ""
+    @State private var newItemType: ItemType = .packing
+    @State private var newItemFinalPass = false
+    @State private var shouldPropagate = false
     @State private var showingResetConfirmation = false
-    @State private var showingOrganizeMode = false
-    @State private var itemToMove: ChecklistItem?
     @State private var showingNotesEditor = false
     @State private var itemToEdit: ChecklistItem?
     @State private var editedItemTitle = ""
+    @State private var showingMoveSheet = false
+    @State private var showingStagePrompt = false
+    @State private var stagePromptItem: ChecklistItem?
+    @State private var hideCheckedItems = false
     @Environment(\.dismiss) private var dismiss
     
     init(checklistID: UUID, mainViewModel: MainViewModel) {
@@ -29,85 +35,100 @@ struct ChecklistView: View {
     }
     
     var body: some View {
-        VStack(spacing: 0) {
-            headerView
-            
-            ScrollView {
-                VStack(spacing: 2) {
-                    if viewModel.checklist.items.isEmpty {
-                        VStack(spacing: Theme.spacing) {
-                            Image(systemName: "checklist")
-                                .font(.system(size: 48))
-                                .foregroundColor(Theme.divider)
-                                .padding(.top, 60)
-                            
-                            Text("No items yet")
-                                .font(Typography.title3)
-                                .foregroundColor(Theme.textSecondary)
-                            
-                            Text("Add your first item to get started")
-                                .font(Typography.body)
-                                .foregroundColor(Theme.textSecondary)
-                            
+        ZStack(alignment: .top) {
+            VStack(spacing: 0) {
+                headerView
+                
+                ScrollView {
+                    VStack(spacing: 2) {
+                        // Final Pass Section (if any items marked)
+                        if hasFinalPassItems {
+                            finalPassSection
+                                .padding(.top, Theme.spacing)
+                        }
+                        
+                        // Categories Section
+                        ForEach(categoriesWithStatus, id: \.category) { categoryData in
+                            categorySection(for: categoryData)
+                        }
+                        
+                        if viewModel.checklist.items.isEmpty {
+                            VStack(spacing: Theme.spacing) {
+                                Image(systemName: "checklist")
+                                    .font(.system(size: 48))
+                                    .foregroundColor(Theme.divider)
+                                    .padding(.top, 60)
+
+                                Text("No items yet")
+                                    .font(Typography.title3)
+                                    .foregroundColor(Theme.textSecondary)
+
+                                Text("Add your first item to get started")
+                                    .font(Typography.body)
+                                    .foregroundColor(Theme.textSecondary)
+
+                                addItemButton
+                                    .padding(.top, Theme.spacing)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, Theme.spacing)
+                        } else if hideCheckedItems && categoriesWithStatus.isEmpty && !hasFinalPassItems {
+                            VStack(spacing: Theme.spacing) {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .font(.system(size: 48))
+                                    .foregroundColor(Theme.success)
+                                    .padding(.top, 60)
+
+                                Text("All items are checked!")
+                                    .font(Typography.title3)
+                                    .foregroundColor(Theme.textSecondary)
+
+                                Text("Toggle the visibility switch to see completed items")
+                                    .font(Typography.body)
+                                    .foregroundColor(Theme.textSecondary)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, Theme.spacing)
+                        } else {
                             addItemButton
                                 .padding(.top, Theme.spacing)
                         }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, Theme.spacing)
-                    } else {
-                        ForEach(viewModel.flattenedItems(), id: \.item.id) { flatItem in
-                            if flatItem.isVisible {
-                                ChecklistItemRow(
-                                    item: flatItem.item,
-                                    viewModel: viewModel,
-                                    isOrganizing: showingOrganizeMode,
-                                    onMoveItem: showingOrganizeMode ? { item in
-                                        itemToMove = item
-                                    } : nil
-                                )
-                                .contextMenu {
-                                    Button {
-                                        editedItemTitle = flatItem.item.title
-                                        itemToEdit = flatItem.item
-                                    } label: {
-                                        Label("Edit", systemImage: "pencil")
-                                    }
-                                    
-                                    Divider()
-                                    
-                                    Button(role: .destructive) {
-                                        withAnimation {
-                                            viewModel.deleteItem(flatItem.item)
-                                        }
-                                    } label: {
-                                        Label("Delete", systemImage: "trash")
-                                    }
-                                }
-                                .transition(.asymmetric(
-                                    insertion: .opacity.combined(with: .move(edge: .top)),
-                                    removal: .opacity.combined(with: .scale)
-                                ))
-                            }
-                        }
-                        
-                        addItemButton
-                            .padding(.top, Theme.spacing)
                     }
+                    .padding(.vertical, Theme.spacing)
                 }
-                .padding(.vertical, Theme.spacing)
+                .background(Theme.background)
+                
+                if viewModel.checklist.isCompleted {
+                    completionBanner
+                }
             }
-            .background(Theme.background)
             
-            if viewModel.checklist.isCompleted {
-                completionBanner
+            // Multi-select toolbar
+            if viewModel.isMultiSelectMode {
+                multiSelectToolbar
             }
         }
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarItems(
+            leading: viewModel.isMultiSelectMode ? Button("Cancel") {
+                viewModel.toggleMultiSelect()
+            } : nil,
             trailing: Menu {
-                Button(action: { showingOrganizeMode.toggle() }) {
-                    Label(showingOrganizeMode ? "Done Organizing" : "Organize Items", systemImage: "arrow.up.arrow.down")
+                if !viewModel.isMultiSelectMode {
+                    Button(action: { viewModel.toggleMultiSelect() }) {
+                        Label("Select Items", systemImage: "checkmark.circle")
+                    }
                 }
+                
+                Button(action: { viewModel.undo() }) {
+                    Label("Undo", systemImage: "arrow.uturn.backward")
+                }
+                .disabled(viewModel.undoStack.isEmpty)
+                
+                Button(action: { viewModel.redo() }) {
+                    Label("Redo", systemImage: "arrow.uturn.forward") 
+                }
+                .disabled(viewModel.redoStack.isEmpty)
                 
                 Divider()
                 
@@ -197,6 +218,21 @@ struct ChecklistView: View {
                         .foregroundColor(Theme.textSecondary)
                 }
             }
+
+            // Toggle for hiding checked items
+            HStack {
+                Toggle(isOn: $hideCheckedItems) {
+                    HStack(spacing: 6) {
+                        Image(systemName: hideCheckedItems ? "eye.slash" : "eye")
+                            .font(.system(size: 14))
+                        Text(hideCheckedItems ? "Hiding checked items" : "Showing all items")
+                            .font(Typography.body)
+                    }
+                    .foregroundColor(Theme.textPrimary)
+                }
+                .toggleStyle(SwitchToggleStyle(tint: Theme.accent))
+            }
+            .padding(.top, 4)
             
             if !viewModel.checklist.notes.isEmpty || showingNotesEditor {
                 VStack(alignment: .leading, spacing: Theme.smallSpacing) {
@@ -275,16 +311,47 @@ struct ChecklistView: View {
             )
         }
         .sheet(isPresented: $showingAddItem) {
-            AddItemSheet(title: $newItemTitle, appData: viewModel.mainViewModel.appData) {
-                print("\n🆕 AddItemSheet callback - Adding: \(newItemTitle)")
+            AddItemView(
+                title: $newItemTitle,
+                selectedCategory: $newItemCategory,
+                itemType: $newItemType,
+                isFinalPass: $newItemFinalPass,
+                shouldPropagate: $shouldPropagate,
+                checklist: viewModel.checklist,
+                appData: viewModel.mainViewModel.appData
+            ) {
                 if !newItemTitle.isEmpty {
-                    viewModel.addItem(title: newItemTitle)
+                    viewModel.addItem(
+                        title: newItemTitle,
+                        category: newItemCategory,
+                        itemType: newItemType,
+                        finalPass: newItemFinalPass
+                    )
+                    
+                    // Handle propagation if needed
+                    if shouldPropagate {
+                        propagateItem()
+                    }
+                    
                     newItemTitle = ""
                 }
             }
+            .onAppear {
+                newItemCategory = viewModel.checklist.lastUsedCategory
+            }
         }
-        .sheet(item: $itemToMove) { item in
-            MoveItemSheet(item: item, viewModel: viewModel)
+        .sheet(isPresented: $showingMoveSheet) {
+            MoveSelectedItemsSheet(viewModel: viewModel)
+        }
+        .alert("Mark as Packed and Loaded?", isPresented: $showingStagePrompt) {
+            Button("Cancel", role: .cancel) {}
+            Button("Confirm") {
+                if let item = stagePromptItem {
+                    viewModel.forceLoadedStage(for: item)
+                }
+            }
+        } message: {
+            Text("This item hasn't been marked as packed yet. Do you want to mark it as both packed and loaded?")
         }
         .sheet(item: $itemToEdit) { item in
             EditItemSheet(
@@ -326,6 +393,247 @@ struct ChecklistView: View {
               let jsonString = String(data: data, encoding: .utf8) else { return }
         
         UIPasteboard.general.string = jsonString
+    }
+    
+    private var hasFinalPassItems: Bool {
+        if hideCheckedItems {
+            return viewModel.checklist.items.contains { $0.finalPass && !$0.isFirstTicked }
+        } else {
+            return viewModel.checklist.items.contains { $0.finalPass }
+        }
+    }
+    
+    @ViewBuilder
+    private var finalPassSection: some View {
+        let finalPassItems = viewModel.checklist.items
+            .filter { $0.finalPass }
+            .filter { !hideCheckedItems || !$0.isFirstTicked }
+        let groupedItems = Dictionary(grouping: finalPassItems, by: { $0.category })
+        
+        VStack(alignment: .leading, spacing: 0) {
+            // Header
+            HStack {
+                Image(systemName: "flag.checkered")
+                    .font(.system(size: 14))
+                    .foregroundColor(Theme.warning)
+                Text("Final Pass")
+                    .font(Typography.headline)
+                    .foregroundColor(Theme.textPrimary)
+                Spacer()
+            }
+            .padding(.horizontal, Theme.spacing)
+            .padding(.vertical, Theme.smallSpacing)
+            .background(Theme.warning.opacity(0.1))
+            
+            // Items grouped by category
+            ForEach(groupedItems.keys.sorted(), id: \.self) { category in
+                finalPassCategorySection(category: category, items: groupedItems[category] ?? [])
+            }
+        }
+        .background(Theme.surface)
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.cornerRadius)
+                .stroke(Theme.warning.opacity(0.3), lineWidth: 1)
+        )
+    }
+    
+    @ViewBuilder
+    private func finalPassCategorySection(category: String, items: [ChecklistItem]) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text(category)
+                .font(Typography.caption)
+                .foregroundColor(Theme.textSecondary)
+                .padding(.horizontal, Theme.spacing)
+                .padding(.top, Theme.smallSpacing)
+            
+            ForEach(items, id: \.id) { item in
+                ChecklistItemRow(
+                    item: item,
+                    viewModel: viewModel,
+                    isMultiSelect: viewModel.isMultiSelectMode,
+                    isSelected: viewModel.selectedItems.contains(item.id),
+                    onStagePrompt: { promptItem in
+                        stagePromptItem = promptItem
+                        showingStagePrompt = true
+                    }
+                )
+            }
+        }
+    }
+    
+    private var categoriesWithStatus: [(category: String, status: CategoryStatus)] {
+        let statuses = viewModel.checklist.allCategoriesComplete().categories
+        let allCategories = viewModel.checklist.categories.map { category in
+            (category: category, status: statuses[category] ?? .incomplete)
+        }
+
+        if hideCheckedItems {
+            // Filter to only show categories that have unchecked items
+            return allCategories.filter { categoryData in
+                let categoryItems = viewModel.checklist.items
+                    .filter { $0.category == categoryData.category && !$0.finalPass }
+                // Show category if it has at least one unchecked item
+                return categoryItems.contains { !$0.isFirstTicked }
+            }
+        } else {
+            return allCategories
+        }
+    }
+    
+    private func categorySection(for categoryData: (category: String, status: CategoryStatus)) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack {
+                Text(categoryData.category)
+                    .font(Typography.headline)
+                    .foregroundColor(Theme.textPrimary)
+                
+                Spacer()
+                
+                // Category status indicator
+                Circle()
+                    .fill(statusColor(for: categoryData.status))
+                    .frame(width: 12, height: 12)
+                
+                // Convert to TODO button for legacy categories
+                if categoryData.category.lowercased().contains("to-do") || categoryData.category.lowercased().contains("todo") {
+                    Button(action: {
+                        viewModel.checklist.convertCategoryToTodoType(categoryData.category)
+                        viewModel.saveChanges()
+                    }) {
+                        Text("Convert to TODO")
+                            .font(Typography.caption)
+                            .foregroundColor(Theme.accent)
+                    }
+                    .padding(.leading, Theme.smallSpacing)
+                }
+            }
+            .padding(.horizontal, Theme.spacing)
+            .padding(.vertical, Theme.smallSpacing)
+            .background(Theme.surface.opacity(0.5))
+            
+            let categoryItems = viewModel.checklist.items
+                .filter { $0.category == categoryData.category && !$0.finalPass }
+                .filter { !hideCheckedItems || !$0.isFirstTicked }
+
+            ForEach(categoryItems, id: \.id) { item in
+                ChecklistItemRow(
+                    item: item,
+                    viewModel: viewModel,
+                    isMultiSelect: viewModel.isMultiSelectMode,
+                    isSelected: viewModel.selectedItems.contains(item.id),
+                    onStagePrompt: { promptItem in
+                        stagePromptItem = promptItem
+                        showingStagePrompt = true
+                    }
+                )
+            }
+        }
+        .padding(.vertical, Theme.smallSpacing)
+    }
+    
+    private func statusColor(for status: CategoryStatus) -> Color {
+        switch status {
+        case .incomplete:
+            return Theme.divider
+        case .amber:
+            return Theme.warning
+        case .complete:
+            return Theme.success
+        }
+    }
+    
+    private var multiSelectToolbar: some View {
+        VStack {
+            Spacer()
+            HStack {
+                Text("\(viewModel.selectedItems.count) selected")
+                    .font(Typography.body)
+                    .foregroundColor(Theme.textPrimary)
+                
+                Spacer()
+                
+                Button("Move") {
+                    showingMoveSheet = true
+                }
+                .disabled(viewModel.selectedItems.isEmpty)
+                
+                Button("Delete") {
+                    for itemId in viewModel.selectedItems {
+                        if let item = findItem(withId: itemId) {
+                            viewModel.deleteItem(item)
+                        }
+                    }
+                    viewModel.toggleMultiSelect()
+                }
+                .foregroundColor(Theme.error)
+                .disabled(viewModel.selectedItems.isEmpty)
+            }
+            .padding()
+            .background(Theme.surface)
+            .overlay(
+                Rectangle()
+                    .frame(height: 1)
+                    .foregroundColor(Theme.divider),
+                alignment: .top
+            )
+        }
+    }
+    
+    private func findItem(withId id: UUID) -> ChecklistItem? {
+        func search(in items: [ChecklistItem]) -> ChecklistItem? {
+            for item in items {
+                if item.id == id {
+                    return item
+                }
+                if let found = search(in: item.children) {
+                    return found
+                }
+            }
+            return nil
+        }
+        return search(in: viewModel.checklist.items)
+    }
+    
+    private func propagateItem() {
+        guard !newItemTitle.isEmpty else { return }
+        
+        // Get the AddItemView instance to retrieve propagation settings
+        let targetListIds = getListsForPropagation()
+        
+        for listId in targetListIds {
+            guard let index = viewModel.mainViewModel.appData.checklists.firstIndex(where: { $0.id == listId }) else { continue }
+            
+            var targetList = viewModel.mainViewModel.appData.checklists[index]
+            
+            // Check if category exists in target list
+            let categoryExists = targetList.items.contains { $0.category == newItemCategory }
+            
+            // Check for duplicates
+            let isDuplicate = targetList.items.contains { item in
+                item.title.lowercased() == newItemTitle.lowercased() && item.category == newItemCategory
+            }
+            
+            if !isDuplicate {
+                let newItem = ChecklistItem(
+                    title: newItemTitle,
+                    category: newItemCategory,
+                    itemType: newItemType,
+                    stage: 0,
+                    finalPass: newItemFinalPass
+                )
+                targetList.items.append(newItem)
+                targetList.modifiedDate = Date()
+                viewModel.mainViewModel.appData.checklists[index] = targetList
+            }
+        }
+        
+        viewModel.mainViewModel.saveData()
+    }
+    
+    private func getListsForPropagation() -> [UUID] {
+        // This would be populated from the AddItemView's propagation settings
+        // For now, return empty array as we need to refactor how this is passed
+        return []
     }
 }
 

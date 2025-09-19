@@ -139,38 +139,105 @@ struct ImportView: View {
             showError("Invalid text data")
             return
         }
-        
+
         do {
+            print("\n📥 IMPORT JSON - Starting import process")
+            print("  📏 JSON size: \(data.count) bytes")
+
             let decodedChecklist = try JSONDecoder().decode(Checklist.self, from: data)
-            
-            // Fix missing children arrays recursively
-            func fixItems(_ items: [ChecklistItem]) -> [ChecklistItem] {
+            print("  ✅ Successfully decoded checklist: \(decodedChecklist.title)")
+            print("  📊 Top-level items: \(decodedChecklist.items.count)")
+
+            // Debug: Print decoded structure
+            func debugPrintItems(_ items: [ChecklistItem], indent: String = "") {
+                for item in items {
+                    print("\(indent)- \(item.title) [category: \(item.category), level: \(item.nestingLevel), children: \(item.children.count)]")
+                    if !item.children.isEmpty {
+                        debugPrintItems(item.children, indent: indent + "  ")
+                    }
+                }
+            }
+            print("  📋 Decoded structure:")
+            debugPrintItems(decodedChecklist.items, indent: "    ")
+
+            // Fix missing children arrays recursively and ensure categories are set
+            func fixItems(_ items: [ChecklistItem], parentCategory: String? = nil) -> [ChecklistItem] {
                 return items.map { item in
                     var fixedItem = item
+
+                    // If item is a top-level category (nestingLevel 0), use its title as the category
+                    if item.nestingLevel == 0 {
+                        fixedItem.category = item.title
+                    } else if let parentCat = parentCategory {
+                        // For nested items, inherit the parent's category
+                        fixedItem.category = parentCat
+                    }
+
                     if !item.hasChildren && item.children.isEmpty {
                         // Leaf nodes should have empty children array
                         fixedItem.children = []
                     } else if item.hasChildren {
-                        // Recursively fix children
-                        fixedItem.children = fixItems(item.children)
+                        // Recursively fix children with the current category
+                        fixedItem.children = fixItems(item.children, parentCategory: fixedItem.category)
                     }
                     return fixedItem
                 }
             }
-            
+
+            let fixedItems = fixItems(decodedChecklist.items)
+            print("  🔧 Fixed items structure:")
+            debugPrintItems(fixedItems, indent: "    ")
+
+            // Convert hierarchical structure to flat structure
+            // The app expects items at the root level with category field, not as children
+            var flatItems: [ChecklistItem] = []
+
+            for categoryItem in fixedItems {
+                if categoryItem.nestingLevel == 0 && !categoryItem.children.isEmpty {
+                    // This is a category with children - extract the children
+                    // The children already have the correct category set from fixItems
+                    for child in categoryItem.children {
+                        var flatChild = child
+                        flatChild.parentID = nil  // No parent in flat structure
+                        flatChild.nestingLevel = 0  // Root level in flat structure
+                        flatItems.append(flatChild)
+                    }
+                } else {
+                    // This is a regular item or an empty category, add it as is
+                    flatItems.append(categoryItem)
+                }
+            }
+
+            print("  📋 Converted to flat structure: \(flatItems.count) items")
+            for item in flatItems {
+                print("    - \(item.title) [category: \(item.category)]")
+            }
+
             var checklist = Checklist(
                 id: UUID(),
                 title: decodedChecklist.title,
-                items: fixItems(decodedChecklist.items),
+                items: flatItems,
                 tags: decodedChecklist.tags,
                 autoResetEnabled: decodedChecklist.autoResetEnabled,
                 resetAfterDays: decodedChecklist.resetAfterDays,
-                notes: decodedChecklist.notes
+                notes: decodedChecklist.notes,
+                listType: decodedChecklist.listType,
+                lastUsedCategory: decodedChecklist.lastUsedCategory
             )
+
+            print("  🆕 Created checklist with ID: \(checklist.id)")
+            print("  📊 Final item count: \(checklist.items.count)")
+            print("  📊 Total items (including nested): \(checklist.totalItemCount)")
+
             checklist.reset()
-            
+            print("  🔄 Reset checklist - completion: \(checklist.completionPercentage)%")
+
             viewModel.appData.checklists.append(checklist)
+            print("  ➕ Added to appData - now have \(viewModel.appData.checklists.count) checklists")
+
             viewModel.saveData()
+            print("  💾 Saved to disk")
+
             dismiss()
         } catch DecodingError.keyNotFound(let key, let context) {
             showError("Missing required field: \(key.stringValue)\nPath: \(context.codingPath.map { $0.stringValue }.joined(separator: " → "))")

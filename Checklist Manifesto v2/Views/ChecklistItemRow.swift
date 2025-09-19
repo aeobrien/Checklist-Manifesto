@@ -3,17 +3,34 @@ import SwiftUI
 struct ChecklistItemRow: View {
     let item: ChecklistItem
     let viewModel: ChecklistViewModel
-    let isOrganizing: Bool
-    let onMoveItem: ((ChecklistItem) -> Void)?
+    var isMultiSelect: Bool = false
+    var isSelected: Bool = false
+    var onStagePrompt: ((ChecklistItem) -> Void)? = nil
+    
     @State private var isHovered = false
     @State private var showingAddSubItem = false
     @State private var newSubItemTitle = ""
     @State private var showingEditItem = false
     @State private var editedTitle = ""
+    @State private var newItemCategory = ""
     
     var body: some View {
         HStack(spacing: 0) {
             HStack(spacing: Theme.smallSpacing) {
+                // Multi-select checkbox
+                if isMultiSelect {
+                    Button(action: {
+                        viewModel.toggleItemSelection(item.id)
+                    }) {
+                        Image(systemName: isSelected ? "checkmark.square.fill" : "square")
+                            .font(.system(size: 18))
+                            .foregroundColor(Theme.accent)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    .padding(.trailing, Theme.smallSpacing)
+                }
+                
+                // Expand/collapse for parent items
                 if item.hasChildren {
                     Button(action: {
                         withAnimation(.easeInOut(duration: 0.25)) {
@@ -31,62 +48,42 @@ struct ChecklistItemRow: View {
                         .frame(width: 16)
                 }
                 
+                // Item type indicator
+                if item.itemType == .todo {
+                    Image(systemName: "checklist")
+                        .font(.system(size: 12))
+                        .foregroundColor(Theme.accent)
+                        .padding(.trailing, 4)
+                }
+                
+                // Final pass indicator
+                if item.finalPass {
+                    Image(systemName: "flag.fill")
+                        .font(.system(size: 10))
+                        .foregroundColor(Theme.warning)
+                        .padding(.trailing, 4)
+                }
+                
                 Text(item.title)
                     .font(Typography.body)
                     .foregroundColor(Theme.textPrimary)
-                    .strikethrough(item.isFirstTicked, color: Theme.textSecondary)
-                    .opacity(item.isFirstTicked ? 0.6 : 1)
+                    .strikethrough(item.isComplete, color: Theme.textSecondary)
+                    .opacity(item.isComplete ? 0.6 : 1)
                 
                 Spacer()
                 
-                if isOrganizing {
-                    Button(action: {
-                        onMoveItem?(item)
-                    }) {
-                        Image(systemName: "arrow.up.and.down.and.arrow.left.and.right")
-                            .font(.system(size: 16))
-                            .foregroundColor(Theme.accent)
-                            .frame(width: 32, height: 32)
-                    }
-                } else if isHovered {
-                    Menu {
-                        Button(action: {
-                            showingAddSubItem = true
-                        }) {
-                            Label("Add Sub-item", systemImage: "plus.circle")
-                        }
-                        
-                        Button(action: {
-                            viewModel.deleteItem(item)
-                        }) {
-                            Label("Delete", systemImage: "trash")
-                        }
-                    } label: {
-                        Image(systemName: "ellipsis")
-                            .font(.system(size: 14))
-                            .foregroundColor(Theme.secondary)
-                            .frame(width: 24, height: 24)
-                    }
-                    .menuStyle(BorderlessButtonMenuStyle())
-                }
-                
-                if !isOrganizing {
-                    if item.hasChildren {
-                        CheckboxPair(
-                            firstChecked: item.isFirstTicked,
-                            secondChecked: item.isSecondTicked ?? false,
-                            onFirstTap: { viewModel.toggleFirstTick(for: item, isManual: true) },
-                            onSecondTap: { viewModel.toggleSecondTick(for: item) }
+                if !isMultiSelect {
+                    if item.itemType == .packing {
+                        PackingCheckboxes(
+                            item: item,
+                            viewModel: viewModel,
+                            onStagePrompt: onStagePrompt
                         )
                     } else {
-                        HStack(spacing: Theme.smallSpacing) {
-                            CustomCheckbox(
-                                isChecked: item.isFirstTicked,
-                                action: { viewModel.toggleFirstTick(for: item, isManual: false) }
-                            )
-                            Spacer()
-                                .frame(width: 24)
-                        }
+                        TodoCheckbox(
+                            item: item,
+                            viewModel: viewModel
+                        )
                     }
                 }
             }
@@ -96,19 +93,45 @@ struct ChecklistItemRow: View {
         }
         .background(
             RoundedRectangle(cornerRadius: Theme.smallCornerRadius)
-                .fill(isHovered ? Theme.divider.opacity(0.5) : Color.clear)
+                .fill(isHovered || isSelected ? Theme.divider.opacity(0.5) : Color.clear)
         )
         .onHover { hovering in
             withAnimation(.easeInOut(duration: 0.15)) {
                 isHovered = hovering
             }
         }
+        .contextMenu {
+            if !isMultiSelect {
+                contextMenuContent
+            }
+        }
+        .onLongPressGesture {
+            if !isMultiSelect {
+                viewModel.toggleMultiSelect()
+                viewModel.toggleItemSelection(item.id)
+            }
+        }
         .sheet(isPresented: $showingAddSubItem) {
-            AddItemSheet(title: $newSubItemTitle, appData: viewModel.mainViewModel.appData) {
+            AddItemView(
+                title: $newSubItemTitle,
+                selectedCategory: $newItemCategory,
+                itemType: .constant(.packing),
+                isFinalPass: .constant(false),
+                shouldPropagate: .constant(false),
+                checklist: viewModel.checklist,
+                appData: viewModel.mainViewModel.appData
+            ) {
                 if !newSubItemTitle.isEmpty {
-                    viewModel.addItem(title: newSubItemTitle, parent: item)
+                    viewModel.addItem(
+                        title: newSubItemTitle,
+                        category: newItemCategory.isEmpty ? item.category : newItemCategory,
+                        parent: item
+                    )
                     newSubItemTitle = ""
                 }
+            }
+            .onAppear {
+                newItemCategory = item.category
             }
         }
         .sheet(isPresented: $showingEditItem) {
@@ -122,6 +145,104 @@ struct ChecklistItemRow: View {
                 }
             )
         }
+    }
+    
+    @ViewBuilder
+    private var contextMenuContent: some View {
+        Button {
+            viewModel.toggleMultiSelect()
+            viewModel.toggleItemSelection(item.id)
+        } label: {
+            Label("Select Items", systemImage: "checkmark.circle")
+        }
+        
+        Button {
+            showingAddSubItem = true
+        } label: {
+            Label("Add Sub-item", systemImage: "plus.circle")
+        }
+        
+        Button {
+            editedTitle = item.title
+            showingEditItem = true
+        } label: {
+            Label("Edit", systemImage: "pencil")
+        }
+        
+        if item.itemType == .packing {
+            Button {
+                var updatedItem = item
+                updatedItem.itemType = .todo
+                updatedItem.setStage(item.isComplete ? 2 : 0)
+                viewModel.updateItem(updatedItem)
+            } label: {
+                Label("Convert to To-Do", systemImage: "checklist")
+            }
+        }
+        
+        Button {
+            var updatedItem = item
+            updatedItem.finalPass.toggle()
+            viewModel.updateItem(updatedItem)
+        } label: {
+            Label(item.finalPass ? "Remove from Final Pass" : "Add to Final Pass", 
+                  systemImage: item.finalPass ? "flag.slash" : "flag")
+        }
+        
+        Divider()
+        
+        Button(role: .destructive) {
+            withAnimation {
+                viewModel.deleteItem(item)
+            }
+        } label: {
+            Label("Delete", systemImage: "trash")
+        }
+    }
+}
+
+struct PackingCheckboxes: View {
+    let item: ChecklistItem
+    let viewModel: ChecklistViewModel
+    let onStagePrompt: ((ChecklistItem) -> Void)?
+    
+    var body: some View {
+        HStack(spacing: Theme.smallSpacing) {
+            // Packed checkbox
+            CustomCheckbox(
+                isChecked: item.stage >= 1,
+                action: {
+                    viewModel.toggleStage(for: item, targetStage: 1)
+                }
+            )
+            
+            // Loaded checkbox (second tick)
+            CustomCheckbox(
+                isChecked: item.stage == 2,
+                action: {
+                    if item.stage < 1 {
+                        // Not packed yet, show prompt
+                        onStagePrompt?(item)
+                    } else {
+                        viewModel.toggleStage(for: item, targetStage: 2)
+                    }
+                }
+            )
+        }
+    }
+}
+
+struct TodoCheckbox: View {
+    let item: ChecklistItem
+    let viewModel: ChecklistViewModel
+    
+    var body: some View {
+        CustomCheckbox(
+            isChecked: item.isComplete,
+            action: {
+                viewModel.toggleStage(for: item, targetStage: 2)
+            }
+        )
     }
 }
 

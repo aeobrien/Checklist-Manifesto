@@ -1,5 +1,21 @@
 import Foundation
 
+enum ListType: String, Codable, CaseIterable {
+    case weekendTrip = "Weekend Trip"
+    case weekAway = "Week Away" 
+    case international = "International"
+    case dayTrip = "Day Trip"
+    case business = "Business Trip"
+    case camping = "Camping"
+    case other = "Other"
+}
+
+enum CategoryStatus {
+    case incomplete
+    case amber // Complete except final pass
+    case complete
+}
+
 struct Checklist: Identifiable, Codable {
     let id: UUID
     var title: String
@@ -11,6 +27,8 @@ struct Checklist: Identifiable, Codable {
     var createdDate: Date
     var modifiedDate: Date
     var notes: String
+    var listType: ListType
+    var lastUsedCategory: String
     
     // Custom decoder to handle missing fields
     init(from decoder: Decoder) throws {
@@ -25,9 +43,11 @@ struct Checklist: Identifiable, Codable {
         createdDate = try container.decodeIfPresent(Date.self, forKey: .createdDate) ?? Date()
         modifiedDate = try container.decodeIfPresent(Date.self, forKey: .modifiedDate) ?? Date()
         notes = try container.decodeIfPresent(String.self, forKey: .notes) ?? ""
+        listType = ListType(rawValue: try container.decodeIfPresent(String.self, forKey: .listType) ?? "Other") ?? .other
+        lastUsedCategory = try container.decodeIfPresent(String.self, forKey: .lastUsedCategory) ?? "General"
     }
     
-    init(id: UUID = UUID(), title: String, items: [ChecklistItem] = [], tags: [String] = [], autoResetEnabled: Bool = false, resetAfterDays: Int? = nil, notes: String = "") {
+    init(id: UUID = UUID(), title: String, items: [ChecklistItem] = [], tags: [String] = [], autoResetEnabled: Bool = false, resetAfterDays: Int? = nil, notes: String = "", listType: ListType = .other, lastUsedCategory: String = "General") {
         self.id = id
         self.title = title
         self.items = items
@@ -37,17 +57,64 @@ struct Checklist: Identifiable, Codable {
         self.createdDate = Date()
         self.modifiedDate = Date()
         self.notes = notes
+        self.listType = listType
+        self.lastUsedCategory = lastUsedCategory
     }
     
     var isCompleted: Bool {
         guard !items.isEmpty else { return false }
-        return items.allSatisfy { item in
-            if item.hasChildren {
-                return item.isSecondTicked == true
+        return allCategoriesComplete().allComplete
+    }
+    
+    func allCategoriesComplete() -> (allComplete: Bool, categories: [String: CategoryStatus]) {
+        var categoryStatuses: [String: CategoryStatus] = [:]
+        
+        // Group items by category
+        let groupedItems = Dictionary(grouping: items, by: { $0.category })
+        
+        for (category, categoryItems) in groupedItems {
+            let status = categoryCompletionStatus(for: categoryItems)
+            categoryStatuses[category] = status
+        }
+        
+        let allComplete = categoryStatuses.values.allSatisfy { $0 == .complete }
+        return (allComplete, categoryStatuses)
+    }
+    
+    func categoryCompletionStatus(for items: [ChecklistItem]) -> CategoryStatus {
+        guard !items.isEmpty else { return .complete }
+        
+        let packingItems = items.filter { $0.itemType == .packing }
+        let todoItems = items.filter { $0.itemType == .todo }
+        let finalPassItems = items.filter { $0.finalPass }
+        let nonFinalPassItems = items.filter { !$0.finalPass }
+        
+        // Check if all packing items are stage 2 (Loaded)
+        let allPackingComplete = packingItems.isEmpty || packingItems.allSatisfy { $0.stage == 2 }
+        
+        // Check if all TODO items are complete
+        let allTodosComplete = todoItems.isEmpty || todoItems.allSatisfy { $0.isComplete }
+        
+        // If all non-final pass items are complete and only final pass items remain
+        let nonFinalPassComplete = nonFinalPassItems.isEmpty || nonFinalPassItems.allSatisfy { item in
+            if item.itemType == .packing {
+                return item.stage == 2
             } else {
-                return item.isFirstTicked
+                return item.isComplete
             }
         }
+        
+        if allPackingComplete && allTodosComplete {
+            return .complete
+        } else if nonFinalPassComplete && !finalPassItems.isEmpty {
+            return .amber // Complete except for final pass items
+        } else {
+            return .incomplete
+        }
+    }
+    
+    var categories: [String] {
+        Array(Set(items.map { $0.category })).sorted()
     }
     
     var totalItemCount: Int {
@@ -107,6 +174,14 @@ struct Checklist: Identifiable, Codable {
         modifiedDate = Date()
         
         print("  📊 After reset: completion: \(completionPercentage)%")
+    }
+    
+    mutating func convertCategoryToTodoType(_ category: String) {
+        for i in items.indices where items[i].category == category {
+            items[i].itemType = .todo
+            items[i].stage = items[i].isFirstTicked ? 2 : 0
+        }
+        modifiedDate = Date()
     }
     
     mutating func markCompleted() {

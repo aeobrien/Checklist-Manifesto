@@ -5,11 +5,15 @@ import Combine
 @MainActor
 class ChecklistViewModel: ObservableObject {
     @Published var checklist: Checklist
+    @Published var selectedItems: Set<UUID> = []
+    @Published var isMultiSelectMode: Bool = false
     let mainViewModel: MainViewModel
     let checklistID: UUID
     
     private var cancellables = Set<AnyCancellable>()
     private let resetTimer = Timer.publish(every: 60, on: .main, in: .common).autoconnect()  // Check every minute
+    var undoStack: [ChecklistState] = []
+    var redoStack: [ChecklistState] = []
     
     init(checklist: Checklist, mainViewModel: MainViewModel) {
         self.checklist = checklist
@@ -63,6 +67,73 @@ class ChecklistViewModel: ObservableObject {
         } else {
             print("  ❌ Checklist NOT FOUND in AppData!")
         }
+    }
+    
+    struct ChecklistState {
+        let items: [ChecklistItem]
+        let description: String
+    }
+    
+    func saveUndoState(description: String) {
+        undoStack.append(ChecklistState(items: checklist.items, description: description))
+        redoStack.removeAll()
+        // Limit undo stack size
+        if undoStack.count > 50 {
+            undoStack.removeFirst()
+        }
+    }
+    
+    func undo() {
+        guard let state = undoStack.popLast() else { return }
+        redoStack.append(ChecklistState(items: checklist.items, description: "Redo"))
+        checklist.items = state.items
+        saveChanges()
+    }
+    
+    func redo() {
+        guard let state = redoStack.popLast() else { return }
+        undoStack.append(ChecklistState(items: checklist.items, description: "Undo"))
+        checklist.items = state.items
+        saveChanges()
+    }
+    
+    func toggleStage(for item: ChecklistItem, targetStage: Int) {
+        print("\n🔄 TOGGLE STAGE - Item: \(item.title), Target: \(targetStage)")
+        print("  Current stage: \(item.stage)")
+        
+        updateItem(item) { updatedItem in
+            if updatedItem.itemType == .todo {
+                // TODO items only have stage 0 (not done) or 2 (done)
+                updatedItem.setStage(updatedItem.stage == 2 ? 0 : 2)
+            } else {
+                // PACKING items
+                if targetStage == 1 {
+                    // Toggle packed state
+                    updatedItem.setStage(updatedItem.stage >= 1 ? 0 : 1)
+                } else if targetStage == 2 {
+                    // Attempt to set loaded - enforce stage progression
+                    if updatedItem.stage < 1 {
+                        // Will be handled by the UI to show prompt
+                        return
+                    }
+                    updatedItem.setStage(updatedItem.stage == 2 ? 1 : 2)
+                }
+            }
+            print("  New stage: \(updatedItem.stage)")
+        }
+        
+        propagateTickStates()
+        checkCompletion()
+        saveChanges()
+    }
+    
+    func forceLoadedStage(for item: ChecklistItem) {
+        updateItem(item) { updatedItem in
+            updatedItem.setStage(2)
+        }
+        propagateTickStates()
+        checkCompletion()
+        saveChanges()
     }
     
     func toggleFirstTick(for item: ChecklistItem, isManual: Bool) {
@@ -121,6 +192,24 @@ class ChecklistViewModel: ObservableObject {
         }
     }
     
+    func updateItem(_ item: ChecklistItem) {
+        func updateRecursively(_ items: inout [ChecklistItem]) -> Bool {
+            for i in items.indices {
+                if items[i].id == item.id {
+                    items[i] = item
+                    return true
+                }
+                if updateRecursively(&items[i].children) {
+                    return true
+                }
+            }
+            return false
+        }
+        _ = updateRecursively(&checklist.items)
+        propagateTickStates()
+        saveChanges()
+    }
+    
     private func updateItem(_ item: ChecklistItem, update: (inout ChecklistItem) -> Void) {
         func updateRecursively(_ items: inout [ChecklistItem]) -> Bool {
             for i in items.indices {
@@ -177,7 +266,7 @@ class ChecklistViewModel: ObservableObject {
         saveChanges()
     }
     
-    func saveChanges() {
+    func saveChanges(skipUndoState: Bool = false) {
         print("\n💾 SAVE CHANGES - Checklist: \(checklist.title)")
         checklist.modifiedDate = Date()
         
@@ -204,12 +293,73 @@ class ChecklistViewModel: ObservableObject {
         objectWillChange.send()
     }
     
-    func addItem(title: String, parent: ChecklistItem? = nil) {
+    func toggleMultiSelect() {
+        isMultiSelectMode.toggle()
+        if !isMultiSelectMode {
+            selectedItems.removeAll()
+        }
+    }
+    
+    func toggleItemSelection(_ itemId: UUID) {
+        if selectedItems.contains(itemId) {
+            selectedItems.remove(itemId)
+        } else {
+            selectedItems.insert(itemId)
+        }
+    }
+    
+    func moveSelectedItems(to category: String) {
+        saveUndoState(description: "Move items")
+        
+        var itemsToMove: [ChecklistItem] = []
+        
+        // Collect items to move
+        func collectItems(_ items: [ChecklistItem]) {
+            for item in items {
+                if selectedItems.contains(item.id) {
+                    itemsToMove.append(item)
+                }
+                collectItems(item.children)
+            }
+        }
+        collectItems(checklist.items)
+        
+        // Remove items from their current locations
+        for itemToMove in itemsToMove {
+            deleteItem(itemToMove, skipUndo: true)
+        }
+        
+        // Add items to new category
+        for var item in itemsToMove {
+            item.category = category
+            item.parentID = nil
+            item.nestingLevel = 0
+            checklist.items.append(item)
+        }
+        
+        selectedItems.removeAll()
+        isMultiSelectMode = false
+        propagateTickStates()
+        saveChanges()
+    }
+    
+    func addItem(title: String, category: String? = nil, parent: ChecklistItem? = nil, itemType: ItemType = .packing, finalPass: Bool = false) {
         print("\n➕ ADD ITEM - Title: \(title), Parent: \(parent?.title ?? "root")")
         print("  📊 Items before: \(checklist.items.count)")
         
         let nestingLevel = (parent?.nestingLevel ?? -1) + 1
-        let newItem = ChecklistItem(title: title, parentID: parent?.id, nestingLevel: nestingLevel)
+        let categoryToUse = category ?? checklist.lastUsedCategory
+        let newItem = ChecklistItem(
+            title: title,
+            category: categoryToUse,
+            parentID: parent?.id,
+            nestingLevel: nestingLevel,
+            itemType: itemType,
+            finalPass: finalPass
+        )
+        
+        // Update last used category
+        checklist.lastUsedCategory = categoryToUse
         print("  🆕 Creating item with ID: \(newItem.id)")
         
         if let parent = parent {
@@ -229,7 +379,10 @@ class ChecklistViewModel: ObservableObject {
         saveChanges()
     }
     
-    func deleteItem(_ item: ChecklistItem) {
+    func deleteItem(_ item: ChecklistItem, skipUndo: Bool = false) {
+        if !skipUndo {
+            saveUndoState(description: "Delete item")
+        }
         
         func deleteRecursively(_ items: inout [ChecklistItem]) -> Bool {
             if let index = items.firstIndex(where: { $0.id == item.id }) {
