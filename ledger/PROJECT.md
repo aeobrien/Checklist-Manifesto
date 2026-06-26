@@ -73,3 +73,5 @@ Checklist Manifesto v2/
 
 - Any remaining rough edges from v2.0 migration
 - Whether to add CloudKit sync for cross-device use
+
+**Lane:** personal
