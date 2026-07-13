@@ -1,0 +1,23 @@
+{
+  "capture_finished_at_utc": "2026-07-13T00:54:51Z",
+  "capture_started_at_utc": "2026-07-13T00:54:48Z",
+  "captured_at_utc": "2026-07-13T00:54:48Z",
+  "captured_byte_estimate": 5278911,
+  "captured_path_count": 75,
+  "consistency_retry_count": 0,
+  "excluded": [],
+  "github_hard_limit_bytes": 100000000,
+  "guardian_version": "2.0-sidecar",
+  "head_state": "symbolic",
+  "host": "aidans-mac-mini",
+  "racy_capture": false,
+  "repository_id": "ChecklistManifesto-1134abdaba42",
+  "schema_version": 1,
+  "snapshot_blob_threshold_bytes": 94371840,
+  "snapshot_consistency": "stable",
+  "source_branch": "main",
+  "source_head_oid": "c80bf457203fbb81226c7a63613b23b8f06960f0",
+  "source_index_sha256": "00fa015665169406a8705a9cc2ce7d66c02641efa6cc764ef071bec0ddf32159",
+  "source_path": "/Users/aidanobrien/Dev/ChecklistManifesto",
+  "upstream_observed": "origin/main"
+}
