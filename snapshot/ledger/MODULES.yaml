@@ -1,0 +1,97 @@
+project_shape:
+  scale: small
+  has_subsystem_layer: true
+  expected_modules: "5-8"
+  kind: product
+
+modules:
+  - id: checklistmanifesto.data-model.persistence-and-migration
+    project: ChecklistManifesto
+    subsystem: Data Model
+    name: Persistence and schema migration
+    capability: Loads and saves the app's checklist dataset and applies backward-compatible defaults when older JSON is decoded.
+    status: working
+    approach: Uses Codable models stored in a single JSON file in the app documents directory, with custom decoders supplying defaults for newer fields.
+    tech: [Swift, Foundation, Codable, JSONDecoder, JSONEncoder, FileManager]
+    io: { in: "checklistData.json and in-memory AppData/Checklist JSON", out: "decoded AppData in memory and rewritten checklistData.json" }
+    code_refs: ["Checklist Manifesto v2/Models/AppData.swift", "Checklist Manifesto v2/Models/Checklist.swift", "Checklist Manifesto v2/Models/ChecklistItem.swift", "Checklist Manifesto v2Tests/ChecklistTests.swift", "Checklist Manifesto v2Tests/JSONImportTests.swift"]
+    known_gaps: ["Disk read/decode failures fall back to empty data with print logging instead of surfacing a recoverable user-facing error.", "Persistence runs synchronously on the main actor path via view models, so save/load work is not isolated from UI updates."]
+    match_keywords: ["json persistence", "codable storage", "schema migration", "local app data", "checklist serialization"]
+
+  - id: checklistmanifesto.data-model.checklist-state-and-completion
+    project: ChecklistManifesto
+    subsystem: Data Model
+    name: Checklist state and completion rules
+    capability: Computes item stages, completion state, category roll-up, final-pass behaviour, resets, and auto-reset eligibility.
+    status: working
+    approach: Encodes checklist semantics directly in Swift structs and computed properties, with recursive item reset/count helpers and stage-based packing versus todo logic.
+    tech: [Swift, Foundation, SwiftUI]
+    io: { in: "Checklist and ChecklistItem values with stages, categories, nesting, and dates", out: "derived completion metrics, category statuses, migrated item state, and reset checklists" }
+    code_refs: ["Checklist Manifesto v2/Models/Checklist.swift", "Checklist Manifesto v2/Models/ChecklistItem.swift", "Checklist Manifesto v2Tests/ChecklistTests.swift"]
+    known_gaps: ["Category discovery and category-status roll-up only inspect checklist.items at the root level, so nested sub-items are not fully represented in category calculations.", "Auto-reset behaviour is implemented but has no direct test coverage in the current test suite."]
+    match_keywords: ["checklist domain model", "completion engine", "packing workflow", "final pass", "auto reset"]
+
+  - id: checklistmanifesto.checklist-ui.tagged-checklist-browser
+    project: ChecklistManifesto
+    subsystem: Checklist UI
+    name: Tagged checklist browser
+    capability: Organises stored checklists by tag, shows progress cards, and launches create, edit, import, duplicate, delete, and open flows.
+    status: working
+    approach: Builds the root experience in SwiftUI using a MainViewModel-backed tag browser with cards, sheets, and navigation links.
+    tech: [SwiftUI, Swift, Foundation]
+    io: { in: "AppData checklists, tags, completion stats, and user taps", out: "tag-grouped checklist browsing UI and navigation into editing/detail flows" }
+    code_refs: ["Checklist Manifesto v2/ContentView.swift", "Checklist Manifesto v2/Views/TagsView.swift", "Checklist Manifesto v2/Views/ChecklistEditorView.swift", "Checklist Manifesto v2/Views/ChecklistEditSheet.swift", "Checklist Manifesto v2/ViewModels/MainViewModel.swift", "Checklist Manifesto v2/Models/Theme.swift"]
+    known_gaps: ["The app reloads all checklist data on TagsView appearance rather than reconciling more granular changes.", "The UI test target exists, but the checked-in UI tests are mostly boilerplate and do not verify this browsing flow."]
+    match_keywords: ["swiftui checklist browser", "tag grouping", "list dashboard", "checklist cards", "navigation shell"]
+
+  - id: checklistmanifesto.checklist-ui.checklist-detail-rendering
+    project: ChecklistManifesto
+    subsystem: Checklist UI
+    name: Checklist detail and review UI
+    capability: Renders a checklist's categories, items, progress, notes, final-pass section, completion banner, and stage-prompt interactions.
+    status: working
+    approach: Uses SwiftUI views backed by ChecklistViewModel to derive category sections, item rows, progress indicators, and inline edit sheets.
+    tech: [SwiftUI, Swift, UIKit]
+    io: { in: "ChecklistViewModel state, checklist metadata, and per-item interactions", out: "interactive checklist detail screens with category and final-pass views" }
+    code_refs: ["Checklist Manifesto v2/Views/ChecklistView.swift", "Checklist Manifesto v2/Views/ChecklistItemRow.swift", "Checklist Manifesto v2/Views/CustomCheckbox.swift", "Checklist Manifesto v2/Models/Theme.swift"]
+    known_gaps: ["Hide-checked filtering and final-pass rendering are driven from root-level checklist.items, so nested structures are not rendered with a fully recursive category view.", "Export is attached to this screen but only copies raw JSON to the clipboard; there is no file-based share/export path."]
+    match_keywords: ["checklist detail ui", "final pass review", "category rollup ui", "swiftui item rows", "progress tracking"]
+
+  - id: checklistmanifesto.item-management.item-editing-and-batch-ops
+    project: ChecklistManifesto
+    subsystem: Item Management
+    name: Item editing and batch operations
+    capability: Adds, edits, deletes, moves, selects, resets, and stage-toggles checklist items, with undo and redo for item-list mutations.
+    status: working
+    approach: Centralises item mutation in ChecklistViewModel with recursive tree updates, per-checklist undo stacks, and SwiftUI sheets for add and move flows.
+    tech: [Swift, SwiftUI, Combine, Timer.publish]
+    io: { in: "User edit actions against ChecklistItem trees and checklist settings", out: "mutated checklist item structures persisted back into AppData" }
+    code_refs: ["Checklist Manifesto v2/ViewModels/ChecklistViewModel.swift", "Checklist Manifesto v2/Views/AddItemView.swift", "Checklist Manifesto v2/Views/ChecklistItemRow.swift", "Checklist Manifesto v2/Views/MoveSelectedItemsSheet.swift", "Checklist Manifesto v2Tests/ChecklistTests.swift"]
+    known_gaps: ["moveSelectedItems flattens moved items back to the root of a category by clearing parentID and resetting nestingLevel to 0.", "Undo/redo snapshots only store checklist.items, so non-item checklist fields are outside this recovery path."]
+    match_keywords: ["tree item editing", "batch move", "undo redo", "checklist item management", "stage toggles"]
+
+  - id: checklistmanifesto.item-management.cross-list-propagation
+    project: ChecklistManifesto
+    subsystem: Item Management
+    name: Cross-list item propagation
+    capability: Intends to add a newly created item to other checklists by list type or manual list selection while avoiding same-category duplicates.
+    status: partial
+    approach: Collects propagation preferences in AddItemView and contains duplicate-check logic in ChecklistView, but the current target-list handoff is stubbed out.
+    tech: [Swift, SwiftUI, Foundation]
+    io: { in: "New item title, category, item type, final-pass flag, and selected target list criteria", out: "matching item inserts into other checklists when propagation is wired through" }
+    code_refs: ["Checklist Manifesto v2/Views/AddItemView.swift", "Checklist Manifesto v2/Views/ChecklistView.swift", "Checklist Manifesto v2Tests/ChecklistTests.swift"]
+    known_gaps: ["ChecklistView.getListsForPropagation() currently returns an empty array, so propagation never actually occurs.", "The computed categoryExists value in propagateItem() is unused, which suggests incomplete handling for missing categories in target lists."]
+    match_keywords: ["cross list propagation", "template reuse", "duplicate detection", "bulk add to lists", "list type targeting"]
+
+  - id: checklistmanifesto.item-management.json-interchange
+    project: ChecklistManifesto
+    subsystem: Item Management
+    name: JSON import and clipboard exchange
+    capability: Imports checklist JSON into the app, normalises imported item structure, and exports the current checklist as JSON text via the clipboard.
+    status: partial
+    approach: Decodes imported JSON into Checklist, repairs categories and child arrays, flattens category-style hierarchies for app use, and uses UIPasteboard for copy/paste exchange.
+    tech: [Swift, SwiftUI, Foundation, Codable, JSONDecoder, JSONEncoder, UIKit, UIPasteboard]
+    io: { in: "Pasted JSON text or the current in-memory Checklist", out: "newly appended imported checklist or exported JSON string on the clipboard" }
+    code_refs: ["Checklist Manifesto v2/Views/ImportView.swift", "Checklist Manifesto v2/Views/ChecklistView.swift", "Checklist Manifesto v2/ViewModels/MainViewModel.swift", "Checklist Manifesto v2Tests/JSONImportTests.swift"]
+    known_gaps: ["Import converts category-with-children structures into a flat root-level list, so source hierarchy is not preserved as nested app data.", "Export is clipboard-only and does not include a validation round-trip or file/document workflow."]
+    match_keywords: ["json import", "clipboard export", "data interchange", "checklist import", "schema normalization"]
