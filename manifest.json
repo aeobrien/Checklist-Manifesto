@@ -1,7 +1,7 @@
 {
-  "capture_finished_at_utc": "2026-08-24T00:00:10Z",
-  "capture_started_at_utc": "2026-08-24T00:00:08Z",
-  "captured_at_utc": "2026-08-24T00:00:08Z",
+  "capture_finished_at_utc": "2026-08-24T01:09:06Z",
+  "capture_started_at_utc": "2026-08-24T01:09:04Z",
+  "captured_at_utc": "2026-08-24T01:09:04Z",
   "captured_byte_estimate": 5278911,
   "captured_path_count": 75,
   "consistency_retry_count": 0,
