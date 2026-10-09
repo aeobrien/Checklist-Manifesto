@@ -1,0 +1,31 @@
+{
+  "verdict": "PASS",
+  "reviewer": "root Astra independent review",
+  "scope": "Local safe-storage and acknowledged caller result propagation only; no UI execution, phone rollout or session interface",
+  "source_hashes": {
+    "Checklist Manifesto v2/Models/AppData.swift": "a228d29134b2fe435b61bc366ad597243aa7803f15cf1bc56cc2b6382f68fb0b",
+    "Checklist Manifesto v2/ViewModels/ChecklistViewModel.swift": "6e4f08fd7e3be4ad5f086298da4661985579e92fb212ab12cbd92256ac9f7961",
+    "Checklist Manifesto v2/ViewModels/MainViewModel.swift": "2535a83b3cf0adc92f39e3601498645269a202c2c6430ab885f6350cad530845",
+    "Checklist Manifesto v2/Views/AddItemView.swift": "7e033da58d0805dd7c3c52a841e38cbfb96a7300e85a2366dd7d056db172e7a6",
+    "Checklist Manifesto v2/Views/ChecklistEditSheet.swift": "582ad19f5130e722a44cb33b7f2702b585d171ca22784f2cf7b10a5efb5efe9b",
+    "Checklist Manifesto v2/Views/ChecklistEditorView.swift": "c4e18e5e0c9f2fdbd38406ce942bfa5564ea59dd53de15d31da120649489ba05",
+    "Checklist Manifesto v2/Views/ChecklistItemRow.swift": "055754d9cc32714de944e8a9e6281c98f9d8bcb80a04dcf0e1e60b25db93122c",
+    "Checklist Manifesto v2/Views/ChecklistView.swift": "cc58fa9cacb0d22c378aecf03416498c4414655e7465c6955a10fd22b0d58bba",
+    "Checklist Manifesto v2/Views/ImportView.swift": "8698532eebe0c3a30fe5911492cbc738bf343cff58f2ab0bccb166c470ae2d74",
+    "Checklist Manifesto v2/Views/TagsView.swift": "f8cc637b2f24ee041fa46f6b7d205032be3a1ea7072a554b252bde4ce8c8ed64",
+    "tests/SafeStorage/Checks.swift": "5ddcd0b03d725cf55ee331eeb2e1940d862082fa41f8b85331e69109e56cc306",
+    "tests/SafeStorage/run.py": "cb8c07822a4c589c27e12a56cb0444151a572ea6f7518fc9e50de5362dc009ff",
+    "tests/SafeStorage/compile-ios.py": "ea68d730a743d3653f66dc516c6ed91ec5228ed4deedd507778ea2ede526948c"
+  },
+  "execution": "astra-probes-01/cli-run-result.json",
+  "checks": 4,
+  "failures": 0,
+  "duration_s": 7.32,
+  "blocking_findings": [],
+  "limits": [
+    "Swift source review and compile do not prove on-screen error visibility.",
+    "Existing import metadata/identity and multi-select transaction issues remain deferred.",
+    "Existing propagateItem has an empty target provider; this review does not certify propagation.",
+    "Sidecar lock protects cooperating writers, not arbitrary external replacement between compare and rename."
+  ]
+}
