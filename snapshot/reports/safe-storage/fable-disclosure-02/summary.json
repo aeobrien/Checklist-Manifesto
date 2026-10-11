@@ -1,0 +1,9 @@
+{
+  "sha256": "e64463c92f91f4cfcf97f515122a8e87c02bf8b87cd962f3bf61bab04b4d49be",
+  "bytes": 157415,
+  "destination": "https://openrouter.ai/api/v1/chat/completions",
+  "model": "anthropic/claude-fable-5.1",
+  "budget_usd": 3,
+  "contains": "Scoped private checklist source, diff and synthetic temporary-file tests. No real checklist data, personal records, credentials, phone data or recordings.",
+  "sent": false
+}
