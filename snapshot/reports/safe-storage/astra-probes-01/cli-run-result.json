@@ -1,0 +1,28 @@
+{
+  "ok": true,
+  "exit_code": 0,
+  "timed_out": false,
+  "duration_s": 7.32,
+  "stdout_tail": "{\"source_sha256\": {\"Models/AppData.swift\": \"a228d29134b2fe435b61bc366ad597243aa7803f15cf1bc56cc2b6382f68fb0b\", \"Models/Checklist.swift\": \"38f7af2f6f228e791f18a3053f1403a8f3016858ed31708c98b3314a42d6bcef\", \"Models/ChecklistItem.swift\": \"5b2efd684e7cf6c95d7904be78630756e1b30ab288569277f3ad70be86ca5bea\", \"ViewModels/MainViewModel.swift\": \"2535a83b3cf0adc92f39e3601498645269a202c2c6430ab885f6350cad530845\"}}\nPASS symlink lock refuses without modifying either file, then recovers\nPASS corrupt then missing original stays protected until restored\nPASS alternating writers preserve acknowledged additions across stale deletion\nPASS first create, last delete, restart and fresh create\nASTRA_STORAGE_CHECKS passed=4 failed=0\n",
+  "stderr_tail": "/Users/aidan/Dev/ChecklistManifesto/reports/safe-storage/astra-probes/Checks.swift:18:19: warning: 'init(contentsOf:)' was deprecated in macOS 15: Use `init(contentsOf:encoding:)` instead\n16 |         check(!vm.createChecklist(title:\"Refused\",tags:[],autoReset:false,resetDays:nil), \"symlink lock allowed write\")\n17 |         check(try Data(contentsOf: store) == original, \"source replaced\")\n18 |         check(try String(contentsOf: other) == \"must survive\", \"lock target changed\")\n   |                   `- warning: 'init(contentsOf:)' was deprecated in macOS 15: Use `init(contentsOf:encoding:)` instead\n19 |         try FileManager.default.removeItem(at:lock)\n20 |         check(vm.reloadData(), \"recovery after bad lock failed\")\n",
+  "truncated": false,
+  "assertions": [
+    {
+      "kind": "exit==",
+      "expected": 0,
+      "actual": 0,
+      "ok": true
+    },
+    {
+      "kind": "stdout.contains",
+      "expected": "ASTRA_STORAGE_CHECKS passed=4 failed=0",
+      "actual": null,
+      "ok": true
+    }
+  ],
+  "files": {
+    "created": [],
+    "modified": [],
+    "deleted": []
+  }
+}

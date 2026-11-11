@@ -1,0 +1,22 @@
+{
+  "ok": false,
+  "exit_code": 1,
+  "timed_out": false,
+  "duration_s": 8.1,
+  "stdout_tail": "{\"source_hashes\": {\"Models/AppData.swift\": \"a228d29134b2fe435b61bc366ad597243aa7803f15cf1bc56cc2b6382f68fb0b\", \"Models/Checklist.swift\": \"38f7af2f6f228e791f18a3053f1403a8f3016858ed31708c98b3314a42d6bcef\", \"Models/ChecklistItem.swift\": \"5b2efd684e7cf6c95d7904be78630756e1b30ab288569277f3ad70be86ca5bea\", \"ViewModels/MainViewModel.swift\": \"2535a83b3cf0adc92f39e3601498645269a202c2c6430ab885f6350cad530845\", \"ViewModels/ChecklistViewModel.swift\": \"e5a4b30038b8f39991de0481192001140e17ab61a2ba50622dd2f1ba4b46779a\"}}\n",
+  "stderr_tail": "/Users/aidan/Dev/ChecklistManifesto/tests/SafeStorage/Checks.swift:187:35: error: cannot convert value of type '()' to specified type 'Bool'\n185 |             let detail=ChecklistViewModel(checklist:good.checklists[0],mainViewModel:vm)\n186 |             let external=try json(fixture(\"Other\"));try external.write(to:url)\n187 |             let added:Bool=detail.addItem(title:\"Not saved\")\n    |                                   `- error: cannot convert value of type '()' to specified type 'Bool'\n188 |             let renamed:Bool=detail.updateItemTitle(good.checklists[0].items[0],newTitle:\"Not saved\")\n189 |             try expect(!added && !renamed,\"Failed mutation reported success to sheet\")\nTraceback (most recent call last):\n  File \"/Users/aidan/Dev/ChecklistManifesto/tests/SafeStorage/run.py\", line 9, in <module>\n    subprocess.run(['xcrun','swiftc','-swift-version','5','-module-cache-path',str(root/'cache'),*[str(source/n) for n in names],str(repo/'tests/SafeStorage/Checks.swift'),'-o',str(root/'checks')],check=True,timeout=90)\n  File \"/Users/aidan/.pyenv/versions/3.10.13/lib/python3.10/subprocess.py\", line 526, in run\n    raise CalledProcessError(retcode, process.args,\nsubprocess.CalledProcessError: Command '['xcrun', 'swiftc', '-swift-version', '5', '-module-cache-path', '/var/folders/4q/7s70w8ys4f5gwsf4grw_njlh0000gn/T/checklist-safe-storage-ku0ovod7/cache', '/Users/aidan/Dev/ChecklistManifesto/Checklist Manifesto v2/Models/AppData.swift', '/Users/aidan/Dev/ChecklistManifesto/Checklist Manifesto v2/Models/Checklist.swift', '/Users/aidan/Dev/ChecklistManifesto/Checklist Manifesto v2/Models/ChecklistItem.swift', '/Users/aidan/Dev/ChecklistManifesto/Checklist Manifesto v2/ViewModels/MainViewModel.swift', '/Users/aidan/Dev/ChecklistManifesto/Checklist Manifesto v2/ViewModels/ChecklistViewModel.swift', '/Users/aidan/Dev/ChecklistManifesto/tests/SafeStorage/Checks.swift', '-o', '/var/folders/4q/7s70w8ys4f5gwsf4grw_njlh0000gn/T/checklist-safe-storage-ku0ovod7/checks']' returned non-zero exit status 1.\n",
+  "truncated": false,
+  "assertions": [
+    {
+      "kind": "exit==",
+      "expected": 0,
+      "actual": 1,
+      "ok": false
+    }
+  ],
+  "files": {
+    "created": [],
+    "modified": [],
+    "deleted": []
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "Checklist Manifesto v2/Models/AppData.swift": "a228d29134b2fe435b61bc366ad597243aa7803f15cf1bc56cc2b6382f68fb0b",
+  "Checklist Manifesto v2/ViewModels/ChecklistViewModel.swift": "e5a4b30038b8f39991de0481192001140e17ab61a2ba50622dd2f1ba4b46779a",
+  "Checklist Manifesto v2/ViewModels/MainViewModel.swift": "2535a83b3cf0adc92f39e3601498645269a202c2c6430ab885f6350cad530845",
+  "Checklist Manifesto v2/Views/ChecklistEditSheet.swift": "582ad19f5130e722a44cb33b7f2702b585d171ca22784f2cf7b10a5efb5efe9b",
+  "Checklist Manifesto v2/Views/ChecklistEditorView.swift": "c4e18e5e0c9f2fdbd38406ce942bfa5564ea59dd53de15d31da120649489ba05",
+  "Checklist Manifesto v2/Views/ChecklistView.swift": "1279010a1ff6d47cb7d7ded06f27745ecd8cabdcab4ccd16fd165d65d5f2fada",
+  "Checklist Manifesto v2/Views/ImportView.swift": "8698532eebe0c3a30fe5911492cbc738bf343cff58f2ab0bccb166c470ae2d74",
+  "Checklist Manifesto v2/Views/TagsView.swift": "f8cc637b2f24ee041fa46f6b7d205032be3a1ea7072a554b252bde4ce8c8ed64",
+  "tests/SafeStorage/Checks.swift": "411ed2bc05775e37043ebc52820b32b936e3ff212dfedde062c153b4b595f559",
+  "tests/SafeStorage/run.py": "cb8c07822a4c589c27e12a56cb0444151a572ea6f7518fc9e50de5362dc009ff",
+  "tests/SafeStorage/compile-ios.py": "ea68d730a743d3653f66dc516c6ed91ec5228ed4deedd507778ea2ede526948c"
+}
