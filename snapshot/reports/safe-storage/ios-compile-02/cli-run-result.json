@@ -1,0 +1,22 @@
+{
+  "ok": true,
+  "exit_code": 0,
+  "timed_out": false,
+  "duration_s": 21.553,
+  "stdout_tail": "/Users/aidan/Dev/ChecklistManifesto/Checklist Manifesto v2/Views/ChecklistView.swift:612:17: warning: initialization of immutable value 'categoryExists' was never used; consider replacing with assignment to '_' or removing it\n            let categoryExists = targetList.items.contains { $0.category == newItemCategory }\n            ~~~~^~~~~~~~~~~~~~\n            _\n/Users/aidan/Dev/ChecklistManifesto/Checklist Manifesto v2/Views/ChecklistView.swift:612:17: warning: initialization of immutable value 'categoryExists' was never used; consider replacing with assignment to '_' or removing it\n            let categoryExists = targetList.items.contains { $0.category == newItemCategory }\n            ~~~~^~~~~~~~~~~~~~\n            _\n",
+  "stderr_tail": "",
+  "truncated": false,
+  "assertions": [
+    {
+      "kind": "exit==",
+      "expected": 0,
+      "actual": 0,
+      "ok": true
+    }
+  ],
+  "files": {
+    "created": [],
+    "modified": [],
+    "deleted": []
+  }
+}

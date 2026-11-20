@@ -1,0 +1,82 @@
+[
+  {
+    "run": "red-01",
+    "ok": false,
+    "exit_code": 1,
+    "duration_s": 9.871,
+    "timed_out": false,
+    "truncated": false
+  },
+  {
+    "run": "caller-red-01",
+    "ok": false,
+    "exit_code": 1,
+    "duration_s": 8.275,
+    "timed_out": false,
+    "truncated": false
+  },
+  {
+    "run": "callback-red-01",
+    "ok": false,
+    "exit_code": 1,
+    "duration_s": 8.1,
+    "timed_out": false,
+    "truncated": false
+  },
+  {
+    "run": "green-01",
+    "ok": true,
+    "exit_code": 0,
+    "duration_s": 9.049,
+    "timed_out": false,
+    "truncated": false
+  },
+  {
+    "run": "green-02",
+    "ok": true,
+    "exit_code": 0,
+    "duration_s": 10.499,
+    "timed_out": false,
+    "truncated": false
+  },
+  {
+    "run": "green-03",
+    "ok": true,
+    "exit_code": 0,
+    "duration_s": 11.084,
+    "timed_out": false,
+    "truncated": false
+  },
+  {
+    "run": "green-04",
+    "ok": true,
+    "exit_code": 0,
+    "duration_s": 8.063,
+    "timed_out": false,
+    "truncated": false
+  },
+  {
+    "run": "ios-compile-01",
+    "ok": false,
+    "exit_code": 65,
+    "duration_s": 9.904,
+    "timed_out": false,
+    "truncated": false
+  },
+  {
+    "run": "ios-compile-02",
+    "ok": true,
+    "exit_code": 0,
+    "duration_s": 21.553,
+    "timed_out": false,
+    "truncated": false
+  },
+  {
+    "run": "ios-compile-03",
+    "ok": true,
+    "exit_code": 0,
+    "duration_s": 24.106,
+    "timed_out": false,
+    "truncated": false
+  }
+]

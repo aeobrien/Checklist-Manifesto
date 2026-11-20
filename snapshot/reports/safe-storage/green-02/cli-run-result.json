@@ -1,0 +1,22 @@
+{
+  "ok": true,
+  "exit_code": 0,
+  "timed_out": false,
+  "duration_s": 10.499,
+  "stdout_tail": "{\"source_hashes\": {\"Models/AppData.swift\": \"a228d29134b2fe435b61bc366ad597243aa7803f15cf1bc56cc2b6382f68fb0b\", \"Models/Checklist.swift\": \"38f7af2f6f228e791f18a3053f1403a8f3016858ed31708c98b3314a42d6bcef\", \"Models/ChecklistItem.swift\": \"5b2efd684e7cf6c95d7904be78630756e1b30ab288569277f3ad70be86ca5bea\", \"ViewModels/MainViewModel.swift\": \"2535a83b3cf0adc92f39e3601498645269a202c2c6430ab885f6350cad530845\", \"ViewModels/ChecklistViewModel.swift\": \"e5a4b30038b8f39991de0481192001140e17ab61a2ba50622dd2f1ba4b46779a\"}}\nPASS missing store remains absent without examples\nPASS valid empty remains empty after restart\nPASS corrupt original survives init and all save attempts\nPASS failed reload keeps last good memory and blocks save\nPASS changed store refuses stale save then explicit reload recovers\nPASS missing after successful load preserves memory\nPASS previously missing store appearing before save is not replaced\nPASS two instances cannot overwrite each other's read version\nPASS write failure is surfaced and memory rolled back\nPASS symlink store refused without changing target\nPASS directory and FIFO are refused without hanging\nPASS unreadable regular file is not replaced\nPASS oversized file refuses before decode\nPASS held writer lock refuses save with original intact\nPASS all metadata and nested state round trip exactly\nPASS supplied corrupt expected bytes cannot authorize replacement\n\n\ud83d\udd35 ChecklistViewModel INIT - Checklist: Synthetic, ID: FD238B36-D7F4-4660-90BC-2DEECB4505FD\n  \ud83d\udcca Initial item count: 0\n  \ud83d\udcca MainViewModel has 1 checklists\n\n\ud83d\udcbe SAVE CHANGES - Checklist: Unsaved title\n  \ud83d\udccd Found at index 0 in mainViewModel.appData\n  \ud83d\udcca Saving 0 items\n\ud83d\udd04 REFRESH from AppData - Looking for ID: FD238B36-D7F4-4660-90BC-2DEECB4505FD\n  \u2705 Found checklist at index 0\n  \ud83d\udcca Item count: 0 -> 0\nPASS detail save failure restores the displayed checklist\nSTORAGE_CHECKS passed=17 failed=0\n",
+  "stderr_tail": "",
+  "truncated": false,
+  "assertions": [
+    {
+      "kind": "exit==",
+      "expected": 0,
+      "actual": 0,
+      "ok": true
+    }
+  ],
+  "files": {
+    "created": [],
+    "modified": [],
+    "deleted": []
+  }
+}

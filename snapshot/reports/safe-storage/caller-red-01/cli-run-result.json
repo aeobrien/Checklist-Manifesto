@@ -1,0 +1,22 @@
+{
+  "ok": false,
+  "exit_code": 1,
+  "timed_out": false,
+  "duration_s": 8.275,
+  "stdout_tail": "{\"source_hashes\": {\"Models/AppData.swift\": \"a228d29134b2fe435b61bc366ad597243aa7803f15cf1bc56cc2b6382f68fb0b\", \"Models/Checklist.swift\": \"38f7af2f6f228e791f18a3053f1403a8f3016858ed31708c98b3314a42d6bcef\", \"Models/ChecklistItem.swift\": \"5b2efd684e7cf6c95d7904be78630756e1b30ab288569277f3ad70be86ca5bea\", \"ViewModels/MainViewModel.swift\": \"4beaf556da9f43a51852281a03b563ae1ac44fdaa90aa3d12fe7b16a6685aeb1\", \"ViewModels/ChecklistViewModel.swift\": \"6dc56a382e7870414e1cea09794c66b102ad2ccf6097d1193684949bf4d87cd0\"}}\nPASS missing store remains absent without examples\nPASS valid empty remains empty after restart\nPASS corrupt original survives init and all save attempts\nPASS failed reload keeps last good memory and blocks save\nPASS changed store refuses stale save then explicit reload recovers\nPASS missing after successful load preserves memory\nPASS previously missing store appearing before save is not replaced\nPASS two instances cannot overwrite each other's read version\nPASS write failure is surfaced and memory rolled back\nPASS symlink store refused without changing target\nPASS directory and FIFO are refused without hanging\nPASS unreadable regular file is not replaced\nPASS oversized file refuses before decode\nPASS held writer lock refuses save with original intact\nPASS all metadata and nested state round trip exactly\nPASS supplied corrupt expected bytes cannot authorize replacement\n\n\ud83d\udd35 ChecklistViewModel INIT - Checklist: Synthetic, ID: AC2CDF01-9C8E-471B-9535-B349102CC11A\n  \ud83d\udcca Initial item count: 0\n  \ud83d\udcca MainViewModel has 1 checklists\n\n\ud83d\udcbe SAVE CHANGES - Checklist: Unsaved title\n  \ud83d\udccd Found at index 0 in mainViewModel.appData\n  \ud83d\udcca Saving 0 items\n  \u2705 Saved to mainViewModel.appData\n  \ud83d\udcca MainViewModel now has 0 items for this checklist\nFAIL detail save failure restores the displayed checklist: Failed(message: \"Detail still displays failed edit as saved\")\nSTORAGE_CHECKS passed=16 failed=1\n",
+  "stderr_tail": "",
+  "truncated": false,
+  "assertions": [
+    {
+      "kind": "exit==",
+      "expected": 0,
+      "actual": 1,
+      "ok": false
+    }
+  ],
+  "files": {
+    "created": [],
+    "modified": [],
+    "deleted": []
+  }
+}
